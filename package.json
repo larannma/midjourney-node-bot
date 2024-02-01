@@ -1,0 +1,33 @@
+{
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "form-data": "^4.0.0",
+    "fs": "^0.0.1-security",
+    "midjourney": "^4.3.11",
+    "mongoose": "^7.5.0",
+    "node-telegram-bot-api": "^0.61.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.9",
+    "@babel/node": "^7.23.9",
+    "@babel/preset-env": "^7.23.9",
+    "@types/node": "^20.11.10",
+    "i": "^0.3.7",
+    "nodemon": "^3.0.1",
+    "npm": "^10.4.0",
+    "socks5-https-client": "^1.2.1"
+  },
+  "name": "node-midjourney-telegram-bot",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "dev": "nodemon app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
