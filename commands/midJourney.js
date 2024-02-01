@@ -28,6 +28,15 @@ const download = (url, path, callback) => {
 const filePath = './downloads'; // Define filePath here
 
 export const midJourney = (bot) => {
+  bot.onText(/\/start/, (msg) => {
+    const chatID = msg.chat.id;
+    const imagePath = './intro.png'; // Update with the actual path to your image
+    const caption = "Просто отправь свою фотку и стань лего человечком";
+
+    // Send the image with a caption
+    bot.sendPhoto(chatID, imagePath, { caption });
+  });
+
   bot.on('photo', async (msg) => {
     const chatID = msg.chat.id;
     try {
@@ -38,13 +47,7 @@ export const midJourney = (bot) => {
       const fileName = `${fileDetails.file_id}.jpg`;
       const downloadFolderPath = path.join(process.cwd(), 'download'); // Save to the "download" folder
       const filePath = path.join(downloadFolderPath, fileName);
-  
-      // Create the "download" folder if it doesn't exist
-      // if (!fs.existsSync(downloadFolderPath)) {
-      //   fs.mkdirSync(downloadFolderPath);
-      // }
-  
-      // Download and save the image
+
       const imageBuffer = await bot.downloadFile(fileId, downloadFolderPath);
       const data = new FormData();
       data.append('image', fs.createReadStream(imageBuffer));
@@ -88,24 +91,6 @@ export const midJourney = (bot) => {
           console.log(`Loading: ${uri}, progress: ${progress}`);
         });
   
-        // const options = {
-        //   reply_markup: JSON.stringify({
-        //     inline_keyboard: [
-        //       [
-        //         { text: "U1", callback_data: "U1" },
-        //         { text: "U2", callback_data: "U2" },
-        //         { text: "U3", callback_data: "U3" },
-        //         { text: "U4", callback_data: "U4" },
-        //       ],
-        //       [
-        //         { text: "V1", callback_data: "V1" },
-        //         { text: "V2", callback_data: "V2" },
-        //         { text: "V3", callback_data: "V3" },
-        //         { text: "V4", callback_data: "V4" },
-        //       ],
-        //     ],
-        //   }),
-        // };
         const imgUrl = Imagine.uri;
         const imgDir = "./Imagines";
         const filePath = `${imgDir}/${userMessageId}.png`;
@@ -124,9 +109,6 @@ export const midJourney = (bot) => {
     }
   });
   
-
-
-
   bot.onText(/\/imagine/, async (msg, match) => {
     userMessageId = msg.message_id;
     prompt = msg.text.replace(match[0], "").trim();
@@ -151,24 +133,6 @@ export const midJourney = (bot) => {
         console.log(`Loading: ${uri}, progress: ${progress}`);
       });
 
-      // const options = {
-      //   reply_markup: JSON.stringify({
-      //     inline_keyboard: [
-      //       [
-      //         { text: "U1", callback_data: "U1" },
-      //         { text: "U2", callback_data: "U2" },
-      //         { text: "U3", callback_data: "U3" },
-      //         { text: "U4", callback_data: "U4" },
-      //       ],
-      //       [
-      //         { text: "V1", callback_data: "V1" },
-      //         { text: "V2", callback_data: "V2" },
-      //         { text: "V3", callback_data: "V3" },
-      //         { text: "V4", callback_data: "V4" },
-      //       ],
-      //     ],
-      //   }),
-      // };
       const imgUrl = Imagine.uri;
       const imgDir = "./Imagines";
       const filePath = `${imgDir}/${userMessageId}.png`;
