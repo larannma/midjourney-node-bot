@@ -3,8 +3,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import request from 'request'
 import fs from 'fs';
-import path from 'path'
-
+import path from 'path';
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -28,13 +27,23 @@ const download = (url, path, callback) => {
 const filePath = './downloads'; // Define filePath here
 
 export const midJourney = (bot) => {
-  bot.onText(/\/start/, (msg) => {
-    const chatID = msg.chat.id;
-    const imagePath = './intro.png'; // Update with the actual path to your image
-    const caption = "Просто отправь свою фотку и стань лего человечком";
+  bot.onText(/\/start/, async (msg) => {
+    try {
+      const chatID = msg.chat.id;
+      const introImagePath = path.join(process.cwd(), 'commands/intro.png')
+      const imagePath = './intro.png'; // Update with the actual path to your image
 
-    // Send the image with a caption
-    bot.sendPhoto(chatID, imagePath, { caption });
+      // Send the image
+      bot.sendPhoto(chatID, introImagePath, { caption: 'Отправь свою фотку и посмотри какой лего человечек из тебя получится' })
+        .then(sentMessage => {
+          // console.log('Image sent successfully:', sentMessage.photo);
+        })
+        .catch(error => {
+          // console.error('Error sending image:', error.message);
+        });
+      } catch (error) {
+        // console.error(error);
+      }
   });
 
   bot.on('photo', async (msg) => {
@@ -46,7 +55,7 @@ export const midJourney = (bot) => {
       // Create a unique filename based on the file_id
       const fileName = `${fileDetails.file_id}.jpg`;
       const downloadFolderPath = path.join(process.cwd(), 'download'); // Save to the "download" folder
-      const filePath = path.join(downloadFolderPath, fileName);
+      // const filePath = path.join(downloadFolderPath, fileName);
 
       const imageBuffer = await bot.downloadFile(fileId, downloadFolderPath);
       const data = new FormData();
