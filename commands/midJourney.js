@@ -6,6 +6,16 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from "dotenv";
 dotenv.config();
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Handle the error or log it
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error.message);
+  // Handle the error or log it
+});
+
 
 import { saveAndSendPhoto } from "./saveAndSendPhoto.js";
 import { MJ } from "../db/mjSchema.js";
