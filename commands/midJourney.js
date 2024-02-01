@@ -1,7 +1,7 @@
 import { Midjourney } from "midjourney";
 import axios from 'axios';
 import FormData from 'form-data';
-import request from 'request'
+import request from 'request';
 import fs from 'fs';
 import path from 'path';
 import dotenv from "dotenv";
@@ -15,8 +15,6 @@ let prompt;
 let client;
 let Imagine;
 let Variation;
-// https://discord.com/channels/1201442228367806524/1201442228367806526
-
 
 const download = (url, path, callback) => {
   request.head(url, (err, res, body) => {
@@ -30,7 +28,7 @@ export const midJourney = (bot) => {
   bot.onText(/\/start/, async (msg) => {
     try {
       const chatID = msg.chat.id;
-      const introImagePath = path.join(process.cwd(), 'commands/intro.png')
+      const introImagePath = path.join(process.cwd(), 'commands/intro.png');
       const imagePath = './intro.png'; // Update with the actual path to your image
 
       // Send the image
@@ -39,19 +37,19 @@ export const midJourney = (bot) => {
           // console.log('Image sent successfully:', sentMessage.photo);
         })
         .catch(error => {
-          // console.error('Error sending image:', error.message);
+          console.error('Error sending image:', error.message);
         });
-      } catch (error) {
-        // console.error(error);
-      }
+    } catch (error) {
+      console.error('Error in /start command:', error);
+    }
   });
 
   bot.on('photo', async (msg) => {
-    const chatID = msg.chat.id;
     try {
+      const chatID = msg.chat.id;
       const fileId = msg.photo[msg.photo.length - 1].file_id;
       const fileDetails = await bot.getFile(fileId);
-  
+
       // Create a unique filename based on the file_id
       const fileName = `${fileDetails.file_id}.jpg`;
       const downloadFolderPath = path.join(process.cwd(), 'download'); // Save to the "download" folder
@@ -61,7 +59,7 @@ export const midJourney = (bot) => {
       const data = new FormData();
       data.append('image', fs.createReadStream(imageBuffer));
       // console.log(data)
-    
+
       const config = {
         method: 'post',
         maxBodyLength: Infinity,
@@ -72,21 +70,64 @@ export const midJourney = (bot) => {
         },
         data: data,
       };
-  
-    try {
-      const response = await axios(config);
-      let FINAL = JSON.stringify(response.data.attachments[0]['url']);
-      FINAL = FINAL.substring(1, FINAL.length-1)
-      console.log(FINAL);
-      // console.log('good');
 
-      await bot.sendMessage(
-        chatID, 
-        `делаем из вас лего человечка...`,
+      try {
+        const response = await axios(config);
+        let FINAL = JSON.stringify(response.data.attachments[0]['url']);
+        FINAL = FINAL.substring(1, FINAL.length - 1);
+        console.log(FINAL);
+
+        await bot.sendMessage(
+          chatID,
+          `делаем из вас лего человечка...`,
+          {
+            reply_to_message_id: userMessageId,
+          }
+        );
+
+        try {
+          client = new Midjourney({
+            ServerId: process.env.SERVER_ID,
+            ChannelId: process.env.CHANNEL_ID,
+            SalaiToken: process.env.SALAI_TOKEN,
+            //Debug: True,
+            Ws: true,
+          });
+          await client.init();
+          Imagine = await client.Imagine(`${FINAL} as lego character, redshift render, cinematic light, f1.2, ultrasharp, masterpiece --v 6`, (uri, progress) => {
+            console.log(`Loading: ${uri}, progress: ${progress}`);
+          });
+
+          const imgUrl = Imagine.uri;
+          const imgDir = "./Imagines";
+          const filePath = `${imgDir}/${userMessageId}.png`;
+          bot.sendMessage(chatID, "Ваша фотка готова и загружается :)");
+          saveAndSendPhoto(imgUrl, imgDir, filePath, chatID, bot);
+        } catch (error) {
+          bot.sendMessage(chatID, `Error during image processing: ${error.message}`);
+        }
+
+      } catch (error) {
+        console.error('Error posting image to webhook:', error.message);
+      }
+    } catch (error) {
+      console.error('Error handling photo:', error.message);
+    }
+  });
+
+  bot.onText(/\/imagine/, async (msg, match) => {
+    try {
+      userMessageId = msg.message_id;
+      prompt = msg.text.replace(match[0], "").trim();
+      const chatID = msg.chat.id;
+      bot.sendMessage(
+        chatID,
+        `генерирую картинку по запросу "${prompt}"`,
         {
           reply_to_message_id: userMessageId,
         }
       );
+
       try {
         client = new Midjourney({
           ServerId: process.env.SERVER_ID,
@@ -96,89 +137,56 @@ export const midJourney = (bot) => {
           Ws: true,
         });
         await client.init();
-        Imagine = await client.Imagine(`${FINAL} as lego character, redshift render, cinematic light, f1.2, ultrasharp, masterpiece --v 6`, (uri, progress) => {
+        Imagine = await client.Imagine(prompt, (uri, progress) => {
           console.log(`Loading: ${uri}, progress: ${progress}`);
         });
-  
+
         const imgUrl = Imagine.uri;
         const imgDir = "./Imagines";
         const filePath = `${imgDir}/${userMessageId}.png`;
-        bot.sendMessage(chatID, "Ваша фотка готова и загружается :)");
+        bot.sendMessage(chatID, "Ваша фотка :)");
         saveAndSendPhoto(imgUrl, imgDir, filePath, chatID, bot);
       } catch (error) {
-        bot.sendMessage(chatID, error);
+        bot.sendMessage(chatID, `Error during image generation: ${error.message}`);
       }
-
-
     } catch (error) {
-      console.error(error);
-    }
-    } catch (error) {
-      console.error('Error:', error.message);
-    }
-  });
-  
-  bot.onText(/\/imagine/, async (msg, match) => {
-    userMessageId = msg.message_id;
-    prompt = msg.text.replace(match[0], "").trim();
-    const chatID = msg.chat.id;
-    bot.sendMessage(
-      chatID,
-      `генерирую картинку по запросу "${prompt}"`,
-      {
-        reply_to_message_id: userMessageId,
-      }
-    );
-    try {
-      client = new Midjourney({
-        ServerId: process.env.SERVER_ID,
-        ChannelId: process.env.CHANNEL_ID,
-        SalaiToken: process.env.SALAI_TOKEN,
-        //Debug: True,
-        Ws: true,
-      });
-      await client.init();
-      Imagine = await client.Imagine(prompt, (uri, progress) => {
-        console.log(`Loading: ${uri}, progress: ${progress}`);
-      });
-
-      const imgUrl = Imagine.uri;
-      const imgDir = "./Imagines";
-      const filePath = `${imgDir}/${userMessageId}.png`;
-      bot.sendMessage(chatID, "Ваша фотка :)");
-      saveAndSendPhoto(imgUrl, imgDir, filePath, chatID, bot);
-    } catch (error) {
-      bot.sendMessage(chatID, error);
+      console.error('Error in /imagine command:', error);
     }
   });
 
   bot.on("callback_query", async (query) => {
-    const { id: chat_id, title: chat_name } = query.message.chat;
-    const message_id = query.message.message_id;
-    const selectedLabel = query.data;
     try {
+      const { id: chat_id, title: chat_name } = query.message.chat;
+      const message_id = query.message.message_id;
+      const selectedLabel = query.data;
+
       if (selectedLabel.includes("U")) {
         bot.sendMessage(chat_id, `Upscaling Image ${selectedLabel}`);
         const UCustomID = Imagine.options?.find(
           (o) => o.label === selectedLabel
         )?.custom;
-        const Upscale = await client.Custom({
-          msgId: Imagine.id,
-          flags: Imagine.flags,
-          customId: UCustomID,
-          loading: (uri, progress) => {
-            console.log(`Loading: ${uri}, progress: ${progress}`);
-          },
-        });
 
-        const imgUrl = Upscale.uri;
-        const imgDir = "./Upscales";
-        const filePath = `${imgDir}/${message_id}.png`;
-        const options = {
-          reply_to_message_id: userMessageId,
-        };
+        try {
+          const Upscale = await client.Custom({
+            msgId: Imagine.id,
+            flags: Imagine.flags,
+            customId: UCustomID,
+            loading: (uri, progress) => {
+              console.log(`Loading: ${uri}, progress: ${progress}`);
+            },
+          });
 
-        saveAndSendPhoto(imgUrl, imgDir, filePath, chat_id, bot, options);
+          const imgUrl = Upscale.uri;
+          const imgDir = "./Upscales";
+          const filePath = `${imgDir}/${message_id}.png`;
+          const options = {
+            reply_to_message_id: userMessageId,
+          };
+
+          saveAndSendPhoto(imgUrl, imgDir, filePath, chat_id, bot, options);
+        } catch (error) {
+          bot.sendMessage(chat_id, `Error during image upscaling: ${error.message}`);
+        }
       } else if (selectedLabel.includes("V")) {
         bot.deleteMessage(chat_id, message_id);
         bot.sendMessage(chat_id, `Generating Variants of ${selectedLabel}.`);
@@ -186,100 +194,113 @@ export const midJourney = (bot) => {
           (o) => o.label === selectedLabel
         )?.custom;
 
-        Variation = await client.Custom({
-          msgId: Imagine.id,
-          flags: Imagine.flags,
-          customId: VCustomID,
-          content: prompt,
-          loading: (uri, progress) => {
-            console.log(`Loading: ${uri}, progress: ${progress}`);
-          },
-        });
-
-        const options = {
-          reply_markup: JSON.stringify({
-            inline_keyboard: [
-              [
-                { text: "1", callback_data: "scale1" },
-                { text: "2", callback_data: "scale2" },
-                { text: "3", callback_data: "scale3" },
-                { text: "4", callback_data: "scale4" },
-              ],
-            ],
-          }),
-        };
-
-        const { id: user_id, username } = query.from;
-        const mj = new MJ({
-          query_id: query.id,
-          message_id,
-          chat_instance: query.chat_instance,
-          chat_id,
-          chat_name,
-          user_id,
-          username,
-          prompt,
-          data: selectedLabel,
-        });
-
-        await mj.save();
-
-        const imgUrl = Variation.uri;
-        const imgDir = "./Variations";
-        const filePath = `${imgDir}/${message_id}.png`;
-
-        saveAndSendPhoto(imgUrl, imgDir, filePath, chat_id, bot, options);
-
-        bot.on("callback_query", async (query_up) => {
-          const upscaleLabel = query_up.data;
-          let imgLabel;
-
-          switch (upscaleLabel) {
-            case "scale1":
-              imgLabel = "U1";
-              break;
-            case "scale2":
-              imgLabel = "U2";
-              break;
-            case "scale3":
-              imgLabel = "U3";
-              break;
-            case "scale4":
-              imgLabel = "U4";
-              break;
-            default:
-              bot.sendMessage(chat_id, "Invalid selection");
-              break;
-          }
-
-          bot.sendMessage(chat_id, `Upscaling Image from Variants ${imgLabel}`);
-
-          const upscaleCustomID = Variation.options?.find(
-            (o) => o.label === imgLabel
-          )?.custom;
-          
-          const variationUpscale = await client.Custom({
-            msgId: Variation.id,
-            flags: Variation.flags,
-            customId: upscaleCustomID,
+        try {
+          Variation = await client.Custom({
+            msgId: Imagine.id,
+            flags: Imagine.flags,
+            customId: VCustomID,
+            content: prompt,
             loading: (uri, progress) => {
               console.log(`Loading: ${uri}, progress: ${progress}`);
             },
           });
 
-          console.log(variationUpscale);
-
-          const imgUrl = variationUpscale.uri;
-          const imgDir = "./VariationsUpscales";
-          const filePath = `${imgDir}/${message_id}.png`;
           const options = {
-            reply_to_message_id: userMessageId,
+            reply_markup: JSON.stringify({
+              inline_keyboard: [
+                [
+                  { text: "1", callback_data: "scale1" },
+                  { text: "2", callback_data: "scale2" },
+                  { text: "3", callback_data: "scale3" },
+                  { text: "4", callback_data: "scale4" },
+                ],
+              ],
+            }),
           };
+
+          const { id: user_id, username } = query.from;
+          const mj = new MJ({
+            query_id: query.id,
+            message_id,
+            chat_instance: query.chat_instance,
+            chat_id,
+            chat_name,
+            user_id,
+            username,
+            prompt,
+            data: selectedLabel,
+          });
+
+          await mj.save();
+
+          const imgUrl = Variation.uri;
+          const imgDir = "./Variations";
+          const filePath = `${imgDir}/${message_id}.png`;
+
           saveAndSendPhoto(imgUrl, imgDir, filePath, chat_id, bot, options);
-        });
+
+          bot.on("callback_query", async (query_up) => {
+            try {
+              const upscaleLabel = query_up.data;
+              let imgLabel;
+
+              switch (upscaleLabel) {
+                case "scale1":
+                  imgLabel = "U1";
+                  break;
+                case "scale2":
+                  imgLabel = "U2";
+                  break;
+                case "scale3":
+                  imgLabel = "U3";
+                  break;
+                case "scale4":
+                  imgLabel = "U4";
+                  break;
+                default:
+                  bot.sendMessage(chat_id, "Invalid selection");
+                  break;
+              }
+
+              bot.sendMessage(chat_id, `Upscaling Image from Variants ${imgLabel}`);
+
+              const upscaleCustomID = Variation.options?.find(
+                (o) => o.label === imgLabel
+              )?.custom;
+
+              try {
+                const variationUpscale = await client.Custom({
+                  msgId: Variation.id,
+                  flags: Variation.flags,
+                  customId: upscaleCustomID,
+                  loading: (uri, progress) => {
+                    console.log(`Loading: ${uri}, progress: ${progress}`);
+                  },
+                });
+
+                console.log(variationUpscale);
+
+                const imgUrl = variationUpscale.uri;
+                const imgDir = "./VariationsUpscales";
+                const filePath = `${imgDir}/${message_id}.png`;
+                const options = {
+                  reply_to_message_id: userMessageId,
+                };
+
+                saveAndSendPhoto(imgUrl, imgDir, filePath, chat_id, bot, options);
+              } catch (error) {
+                bot.sendMessage(chat_id, `Error during variation upscaling: ${error.message}`);
+              }
+            } catch (error) {
+              console.error('Error handling callback_query (variation upscaling):', error);
+            }
+          });
+        } catch (error) {
+          bot.sendMessage(chat_id, `Error during generating variants: ${error.message}`);
+        }
       }
     } catch (error) {
-      bot.sendMessage(chat_id, error, { reply_to_message_id: userMessageId });
+      console.error('Error handling callback_query:', error);
     }
   });
 };
